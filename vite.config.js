@@ -3,7 +3,14 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  server: { port: 3000 },
-  preview: { port: 3000, host: '0.0.0.0' },
+  server: {
+    port: 3000,
+    allowedHosts: ['ap-autopilot.up.railway.app']
+  },
+  preview: {
+    port: 3000,
+    host: '0.0.0.0',
+    allowedHosts: ['ap-autopilot.up.railway.app']
+  },
   build: { outDir: 'dist' }
 })
