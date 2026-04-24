@@ -49,8 +49,10 @@ const ALL_BILLS=[
   {id:"B-C05",vendor:"Google India",amount:45000,source:"cc",status:"posted",step:13,date:"2026-04-05",gl:"Advertisement & Marketing",queue:null,month:"Apr"},
   {id:"B-C06",vendor:"Uber India",amount:1240,source:"cc",status:"posted",step:13,date:"2026-04-08",gl:"Travel Expenses",queue:null,month:"Apr"},
 ];
-const MONTHLY=[{month:"Jan",received:3,posted:3,exception:0,amount:391400},{month:"Feb",received:3,posted:3,exception:0,amount:34400},{month:"Mar",received:3,posted:1,exception:2,amount:287000},{month:"Apr",received:13,posted:6,exception:3,parked:1,pending:4,amount:109720}];
+const MONTHLY=[{month:"Apr",received:11,posted:3,exception:2,parked:1,pending:4,amount:59220}];
 const WEEKLY=[{week:"W1 (1-7)",received:3,posted:2,exception:0,parked:1},{week:"W2 (8-14)",received:5,posted:3,exception:1,parked:0},{week:"W3 (15-21)",received:4,posted:2,exception:2,parked:0}];
+const CURRENT_MONTH="Apr";
+const ACTIVE_BILLS=ALL_BILLS.filter(b=>b.month===CURRENT_MONTH);
 
 const fmt=n=>new Intl.NumberFormat("en-IN").format(Math.abs(n));
 const fmtL=n=>n>=100000?`${(n/100000).toFixed(1)}L`:n>=1000?`${(n/1000).toFixed(0)}K`:String(n);
@@ -161,13 +163,13 @@ export default function Dashboard() {
   const [tab,setTab]=useState("overview");
   const [conn,setConn]=useState({zoho:"checking",slack:"checking",drive:"checking"});
   const [orgInfo,setOrgInfo]=useState(null);
-  const [bills,setBills]=useState(ALL_BILLS);
+  const [bills,setBills]=useState(ACTIVE_BILLS);
   const [queueFilter,setQueueFilter]=useState(null);
   const [sourceFilter,setSourceFilter]=useState("all");
   const [statusFilter,setStatusFilter]=useState("all");
   const [periodMode,setPeriodMode]=useState("monthly");
-  const [customFrom,setCustomFrom]=useState("2026-01-01");
-  const [customTo,setCustomTo]=useState("2026-04-22");
+  const [customFrom,setCustomFrom]=useState("2026-04-01");
+  const [customTo,setCustomTo]=useState("2026-04-24");
   const [resolvedBills,setResolvedBills]=useState({});
   const [auditLog,setAuditLog]=useState([]);
   const [slackSending,setSlackSending]=useState({});
