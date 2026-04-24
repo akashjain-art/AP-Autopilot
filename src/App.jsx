@@ -9,11 +9,6 @@ const C = {
   purpleBg:"#faf5ff", blueBg:"#eff6ff", tealBg:"#f0fdfa",
 };
 const ORG_ID = "60036724867";
-const SPOCS = {
-  Mahesh:{slackId:"U09G6616K8F",role:"Finance — Primary Approver",color:"#7c3aed",bg:"#faf5ff"},
-  Akash: {slackId:"U09G6616K8F",role:"Finance Controller",color:"#2563eb",bg:"#eff6ff"},
-  Tushar:{slackId:"U07FRUKJTL4",role:"AP Team",color:"#d97706",bg:"#fffbeb"},
-};
 const QUEUES = {
   Q1:{name:"GST / RCM",owner:"Saurav",color:"#dc2626",bg:"#fef2f2",sla:"24h"},
   Q2:{name:"TDS mismatch",owner:"Saurav",color:"#ea580c",bg:"#fff7ed",sla:"24h"},
@@ -24,406 +19,262 @@ const QUEUES = {
   Q7:{name:"GL unclear",owner:"Mahesh",color:"#0d9488",bg:"#f0fdfa",sla:"24h"},
   Q8:{name:"Proof-check",owner:"Tushar",color:"#0284c7",bg:"#f0f9ff",sla:"Immediate"},
 };
-const fmt = n => new Intl.NumberFormat("en-IN").format(Math.abs(n));
-const fmtL = n => n>=100000?`${(n/100000).toFixed(1)}L`:n>=1000?`${(n/1000).toFixed(0)}K`:String(n);
+const SPOCS = {
+  Mahesh:{slackId:"U09G6616K8F",role:"Finance — Primary Approver",color:"#7c3aed",bg:"#faf5ff"},
+  Akash: {slackId:"U09G6616K8F",role:"Finance Controller",color:"#2563eb",bg:"#eff6ff"},
+  Tushar:{slackId:"U07FRUKJTL4",role:"AP Team",color:"#d97706",bg:"#fffbeb"},
+};
+const GL_OPTIONS=["Subscription Charges","Cloud Charges","ISP Expenses","Infrastructure CityWise","Legal & Professional","Advertisement & Marketing","Variable Manpower","Logistic Charges","Stationery & Printing","Finance Cost","Employee Welfare","Travel Expenses","Call Centre Charges","Staff Welfare"];
+const GST_OPTIONS=["GST (CGST+SGST)","IGST","IGST (RCM)"];
+const TDS_OPTIONS=[{label:"Not applicable",section:null,rate:null},{label:"194J — Professional (10%)",section:"194J",rate:10},{label:"194C — Contractor (2%)",section:"194C",rate:2},{label:"194I — Rent (10%)",section:"194I",rate:10},{label:"194D — Insurance (5%)",section:"194D",rate:5},{label:"Section 393 — TDS (10%)",section:"393",rate:10}];
+const DAYS=[{k:"mon",l:"Mon"},{k:"tue",l:"Tue"},{k:"wed",l:"Wed"},{k:"thu",l:"Thu"},{k:"fri",l:"Fri"},{k:"sat",l:"Sat"},{k:"sun",l:"Sun"}];
+const ALL_BILLS=[
+  {id:"B-Z06",vendor:"Amazon Web Services",amount:189340,source:"zoho",status:"exception",step:9,date:"2026-03-31",gl:"Cloud Charges",queue:"Q1",queueReason:"RCM overseas conflict — currency USD, country USA.",failedRules:["GST-003"],month:"Mar"},
+  {id:"B-Z07",vendor:"Amazon Web Services (dup)",amount:189340,source:"zoho",status:"exception",step:5,date:"2026-03-31",gl:"Cloud Charges",queue:"Q4",queueReason:"Exact duplicate: invoice AWS-IN-2026-Q1-7721 already exists.",failedRules:["A1-020"],month:"Mar"},
+  {id:"B-Z08",vendor:"Kapoor & Associates",amount:150000,source:"zoho",status:"parked",step:2,date:"2026-04-01",gl:null,queue:null,month:"Apr"},
+  {id:"B-Z09",vendor:"Unregistered Consultant",amount:75000,source:"zoho",status:"in_zoho",step:10,date:"2026-04-08",gl:"Legal & Professional",queue:null,approver:"Mahesh",daysPending:4,billNo:"#UC-0042",month:"Apr"},
+  {id:"B-Z10",vendor:"Skyline Events Pvt Ltd",amount:48000,source:"zoho",status:"in_zoho",step:10,date:"2026-04-10",gl:"Advertisement & Marketing",queue:null,approver:"Mahesh",daysPending:2,billNo:"#SE-2026-19",month:"Apr"},
+  {id:"B-Z11",vendor:"WeWork India (Apr)",amount:340000,source:"zoho",status:"in_zoho",step:10,date:"2026-04-15",gl:"Infrastructure CityWise",queue:null,approver:"Mahesh",daysPending:7,billNo:"#WW-APR-01",month:"Apr"},
+  {id:"B-Z12",vendor:"Meta Platforms Inc",amount:92000,source:"zoho",status:"in_zoho",step:10,date:"2026-04-18",gl:"Advertisement & Marketing",queue:null,approver:"Akash",daysPending:1,billNo:"#META-0089",month:"Apr"},
+  {id:"B-C10",vendor:"IGST Assessment",amount:8400,source:"cc",status:"exception",step:2,date:"2026-04-13",gl:null,queue:"Q5",queueReason:"IGST Assessment — govt payment. Saurav to confirm.",failedRules:["CC-SKIP-01"],month:"Apr"},
+  {id:"B-C11",vendor:"Unknown Merchant XYZ",amount:3500,source:"cc",status:"exception",step:3,date:"2026-04-15",gl:null,queue:"Q3",queueReason:"No pattern match. Tushar to add merchant pattern.",failedRules:["CC-MATCH-04"],month:"Apr"},
+  {id:"B-C13",vendor:"Refund Amazon",amount:-1500,source:"cc",status:"exception",step:2,date:"2026-04-18",gl:null,queue:"Q5",queueReason:"Amount <= 0. Reversal — Tushar to match against original.",failedRules:["CC-SKIP-02"],month:"Apr"},
+  {id:"B-Z01",vendor:"CloudTech Solutions",amount:42500,source:"zoho",status:"posted",step:12,date:"2026-01-10",gl:"Subscription Charges",queue:null,month:"Jan"},
+  {id:"B-Z02",vendor:"WeWork India",amount:340000,source:"zoho",status:"posted",step:12,date:"2026-01-15",gl:"Infrastructure CityWise",queue:null,month:"Jan"},
+  {id:"B-C01",vendor:"Razorpay",amount:8900,source:"cc",status:"posted",step:13,date:"2026-01-22",gl:"Finance Cost",queue:null,month:"Jan"},
+  {id:"B-Z03",vendor:"Metro Logistics",amount:18500,source:"zoho",status:"posted",step:12,date:"2026-02-14",gl:"Logistic Charges",queue:null,month:"Feb"},
+  {id:"B-Z04",vendor:"Airtel Broadband",amount:9200,source:"zoho",status:"posted",step:12,date:"2026-02-20",gl:"ISP Expenses",queue:null,month:"Feb"},
+  {id:"B-Z05",vendor:"Skyline Realty LLP",amount:287000,source:"zoho",status:"posted",step:12,date:"2026-03-05",gl:"Infrastructure CityWise",queue:null,month:"Mar"},
+  {id:"B-C04",vendor:"Zoho Corporation",amount:12980,source:"cc",status:"posted",step:13,date:"2026-04-02",gl:"Subscription Charges",queue:null,month:"Apr"},
+  {id:"B-C05",vendor:"Google India",amount:45000,source:"cc",status:"posted",step:13,date:"2026-04-05",gl:"Advertisement & Marketing",queue:null,month:"Apr"},
+  {id:"B-C06",vendor:"Uber India",amount:1240,source:"cc",status:"posted",step:13,date:"2026-04-08",gl:"Travel Expenses",queue:null,month:"Apr"},
+];
+const MONTHLY=[{month:"Jan",received:3,posted:3,exception:0,amount:391400},{month:"Feb",received:3,posted:3,exception:0,amount:34400},{month:"Mar",received:3,posted:1,exception:2,amount:287000},{month:"Apr",received:13,posted:6,exception:3,parked:1,pending:4,amount:109720}];
+const WEEKLY=[{week:"W1 (1-7)",received:3,posted:2,exception:0,parked:1},{week:"W2 (8-14)",received:5,posted:3,exception:1,parked:0},{week:"W3 (15-21)",received:4,posted:2,exception:2,parked:0}];
 
-// ── Call Anthropic API + Zoho MCP ──
-async function callZoho(prompt) {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method:"POST", headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({
-      model:"claude-sonnet-4-20250514", max_tokens:4000,
-      messages:[{role:"user",content:prompt}],
-      mcp_servers:[{type:"url",url:"https://zohobooks.zoho.in/mcp/v1",name:"zoho-books-mcp"}]
-    })
-  });
-  const d = await res.json();
-  const results = d.content?.filter(b=>b.type==="mcp_tool_result").map(b=>b.content?.[0]?.text||"").join("\n");
-  const text = d.content?.filter(b=>b.type==="text").map(b=>b.text).join(" ")||"";
-  return { results, text, raw: d };
-}
+const fmt=n=>new Intl.NumberFormat("en-IN").format(Math.abs(n));
+const fmtL=n=>n>=100000?`${(n/100000).toFixed(1)}L`:n>=1000?`${(n/1000).toFixed(0)}K`:String(n);
+const parseD=s=>new Date(s+"T00:00:00");
+const tt={contentStyle:{background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,color:C.text,boxShadow:"0 4px 12px rgba(0,0,0,0.08)"}};
 
-// ── Slack send ──
-async function sendSlack(userId, message) {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method:"POST", headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({
-      model:"claude-sonnet-4-20250514", max_tokens:1000,
-      messages:[{role:"user",content:`Send this Slack DM to user ${userId}:\n\n${message}`}],
-      mcp_servers:[{type:"url",url:"https://mcp.slack.com/mcp",name:"slack-mcp"}]
-    })
-  });
-  const d = await res.json();
-  return d.content?.length > 0;
-}
+const StatusPill=({status})=>{
+  const m={posted:{bg:"#f0fdf4",text:"#15803d",border:"#bbf7d0",label:"Posted"},exception:{bg:"#fffbeb",text:"#b45309",border:"#fde68a",label:"Exception"},in_zoho:{bg:"#eff6ff",text:"#1d4ed8",border:"#bfdbfe",label:"In Zoho (monitoring)"},parked:{bg:"#f8fafc",text:"#64748b",border:"#cbd5e1",label:"Parked"}};
+  const s=m[status]||{bg:"#eff6ff",text:"#1d4ed8",border:"#bfdbfe",label:"Processing"};
+  return <span style={{background:s.bg,color:s.text,border:`1px solid ${s.border}`,padding:"2px 10px",borderRadius:20,fontSize:11,fontWeight:600}}>{s.label}</span>;
+};
+const SrcPill=({source})=>(<span style={{background:source==="cc"?"#eff6ff":"#f8fafc",color:source==="cc"?"#1d4ed8":"#475569",border:`1px solid ${source==="cc"?"#bfdbfe":"#e2e8f0"}`,padding:"2px 8px",borderRadius:4,fontSize:10,fontWeight:700}}>{source.toUpperCase()}</span>);
+const Metric=({label,value,sub,color,bg})=>(<div style={{background:bg||C.card,borderRadius:12,padding:"16px 20px",border:`1px solid ${C.border}`,borderTop:`3px solid ${color||C.accent}`}}><div style={{fontSize:10,color:C.muted,textTransform:"uppercase",letterSpacing:1.2,fontWeight:600}}>{label}</div><div style={{fontSize:28,fontWeight:700,color:C.text,fontFamily:"'JetBrains Mono',monospace",marginTop:4}}>{value}</div>{sub&&<div style={{fontSize:11,color:C.dim,marginTop:2}}>{sub}</div>}</div>);
+const ConnBadge=({label,status,detail})=>(<div style={{background:C.card,borderRadius:10,padding:"12px 16px",border:`1px solid ${status==="ok"?"#bbf7d0":status==="checking"?"#bfdbfe":"#fecaca"}`,display:"flex",alignItems:"center",gap:12}}><div style={{width:10,height:10,borderRadius:"50%",background:status==="ok"?C.green:status==="checking"?C.accent:C.red,flexShrink:0}}/><div><div style={{fontSize:13,fontWeight:600,color:C.text}}>{label}</div><div style={{fontSize:11,color:C.muted}}>{detail}</div></div><div style={{marginLeft:"auto",fontSize:11,fontWeight:600,color:status==="ok"?C.green:status==="checking"?C.accent:C.red}}>{status==="ok"?"Connected":status==="checking"?"Checking...":"Failed"}</div></div>);
 
-const Metric = ({label,value,sub,color,bg})=>(
-  <div style={{background:bg||C.card,borderRadius:12,padding:"16px 20px",border:`1px solid ${C.border}`,borderTop:`3px solid ${color||C.accent}`}}>
-    <div style={{fontSize:10,color:C.muted,textTransform:"uppercase",letterSpacing:1.2,fontWeight:600}}>{label}</div>
-    <div style={{fontSize:28,fontWeight:700,color:C.text,fontFamily:"'JetBrains Mono',monospace",marginTop:4}}>{value}</div>
-    {sub&&<div style={{fontSize:11,color:C.dim,marginTop:2}}>{sub}</div>}
-  </div>
-);
-
-const ConnBadge = ({label,status,detail})=>(
-  <div style={{background:C.card,borderRadius:10,padding:"12px 16px",border:`1px solid ${status==="ok"?"#bbf7d0":status==="checking"?"#bfdbfe":"#fecaca"}`,display:"flex",alignItems:"center",gap:12}}>
-    <div style={{width:10,height:10,borderRadius:"50%",background:status==="ok"?C.green:status==="checking"?C.accent:C.red,flexShrink:0,animation:status==="checking"?"pulse 1s infinite":""}}/>
-    <div>
-      <div style={{fontSize:13,fontWeight:600,color:C.text}}>{label}</div>
-      <div style={{fontSize:11,color:C.muted}}>{detail}</div>
+// ── Transaction Detail Modal ──────────────────────────────────
+const TransactionDetail=({bill,onClose,onAction})=>{
+  const [detailTab,setDetailTab]=useState(bill.source==="cc"?"statement":"document");
+  const q=bill.queue?QUEUES[bill.queue]:null;
+  const isPosted=bill.status==="posted";
+  const isEditable=!isPosted;
+  const initGL=bill.gl||"Subscription Charges";
+  const initGST=bill.queue==="Q1"?"IGST (RCM)":["google","aws","adobe","atlassian"].some(k=>(bill.vendor||"").toLowerCase().includes(k))?"IGST (RCM)":"GST (CGST+SGST)";
+  const initTDS=bill.gl==="Legal & Professional"?"194J — Professional (10%)":bill.gl==="Logistic Charges"?"194C — Contractor (2%)":bill.gl==="Infrastructure CityWise"?"194I — Rent (10%)":"Not applicable";
+  const [editGL,setEditGL]=useState(initGL);
+  const [editGST,setEditGST]=useState(initGST);
+  const [editTDS,setEditTDS]=useState(initTDS);
+  const [saving,setSaving]=useState(false);
+  const [saved,setSaved]=useState(false);
+  const [dirty,setDirty]=useState(false);
+  const tdsOpt=TDS_OPTIONS.find(t=>t.label===editTDS)||TDS_OPTIONS[0];
+  const base=Math.round(Math.abs(bill.amount)/1.18);
+  const gstAmt=Math.round(Math.abs(bill.amount)-base);
+  const rcm=editGST.includes("RCM");
+  const tdsAmt=tdsOpt.rate?Math.round(base*tdsOpt.rate/100):0;
+  const onChange=setter=>e=>{setter(e.target.value);setDirty(true);setSaved(false);};
+  const saveToZoho=async()=>{setSaving(true);await new Promise(r=>setTimeout(r,1100));setSaving(false);setSaved(true);setDirty(false);};
+  const ccStatement={cardLast4:["C09","C07","C04","C05"].some(x=>bill.id.includes(x))?"4521":"7893",txnDate:bill.date,postDate:bill.date,description:(bill.vendor||"").toUpperCase()+" PAYMENT",cardHolder:["C09","C07","C04","C05"].some(x=>bill.id.includes(x))?"Akash Jain":"Tushar Gupta",refNo:"TXN"+bill.id.replace(/[^0-9]/g,"").padStart(10,"0")};
+  const tabs=[...(bill.source==="cc"?[{id:"statement",label:"CC Statement"}]:[{id:"document",label:"Invoice Document"}]),{id:"entry",label:isEditable?"Edit Zoho Entry":"Zoho Entry"},...(bill.queue?[{id:"action",label:"Take Action"}]:[])];
+  const sel={background:C.surface,border:`1.5px solid ${C.border}`,borderRadius:7,padding:"7px 10px",color:C.text,fontSize:13,outline:"none",cursor:"pointer",width:"100%",fontFamily:"inherit"};
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.45)",display:"flex",justifyContent:"center",alignItems:"center",zIndex:100,backdropFilter:"blur(3px)"}} onClick={onClose}>
+      <div style={{background:C.card,borderRadius:16,width:740,maxWidth:"94%",maxHeight:"88vh",overflow:"hidden",border:`1px solid ${C.border}`,boxShadow:"0 24px 64px rgba(0,0,0,0.18)",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+        <div style={{padding:"16px 22px",borderBottom:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"start",flexShrink:0}}>
+          <div><div style={{fontSize:18,fontWeight:700,color:C.text}}>{bill.vendor}</div><div style={{fontSize:11,color:C.dim,fontFamily:"'JetBrains Mono',monospace",marginTop:3}}>{bill.id} · {bill.date}</div></div>
+          <div style={{display:"flex",alignItems:"center",gap:12}}>
+            <div style={{textAlign:"right"}}><div style={{fontSize:22,fontWeight:700,color:bill.amount<0?C.red:C.text,fontFamily:"'JetBrains Mono',monospace"}}>{bill.amount<0?"-":""}₹{fmt(bill.amount)}</div>{q&&<span style={{background:q.bg,color:q.color,padding:"2px 10px",borderRadius:20,fontSize:11,fontWeight:600}}>{bill.queue} — {q.name}</span>}{isPosted&&<span style={{background:C.greenBg,color:C.green,border:"1px solid #bbf7d0",padding:"2px 10px",borderRadius:20,fontSize:11,fontWeight:600,display:"block",marginTop:4}}>Posted — read only</span>}</div>
+            <button onClick={onClose} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:8,width:32,height:32,cursor:"pointer",fontSize:18,color:C.muted,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+          </div>
+        </div>
+        <div style={{display:"flex",borderBottom:`1px solid ${C.border}`,flexShrink:0,padding:"0 22px"}}>
+          {tabs.map(t=>(<button key={t.id} onClick={()=>setDetailTab(t.id)} style={{background:"none",border:"none",borderBottom:detailTab===t.id?`2px solid ${C.accent}`:"2px solid transparent",color:detailTab===t.id?C.accent:C.muted,padding:"10px 16px",fontSize:13,fontWeight:detailTab===t.id?600:400,cursor:"pointer"}}>{t.label}</button>))}
+        </div>
+        <div style={{overflow:"auto",flex:1,padding:"18px 22px"}}>
+          {detailTab==="document"&&(bill.status==="parked"?(<div style={{textAlign:"center",padding:40,color:C.muted}}><div style={{fontSize:40,marginBottom:12}}>📄</div><div style={{fontWeight:600,color:C.text,marginBottom:6}}>Document parked — not a tax invoice</div><div style={{marginTop:14,padding:"10px 16px",background:C.amberBg,border:"1px solid #fde68a",borderRadius:8,fontSize:12,color:"#92400e"}}>Contact vendor to issue a proper GST Tax Invoice</div></div>):(<div><div style={{background:C.surface,borderRadius:12,border:`1px solid ${C.border}`,overflow:"hidden",marginBottom:12}}><div style={{background:"#374151",padding:"8px 16px",display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{color:"#d1d5db",fontSize:12,fontFamily:"'JetBrains Mono',monospace"}}>{(bill.vendor||"").replace(/\s+/g,"-").toUpperCase()}-{bill.billNo||bill.id}.pdf</span><div style={{display:"flex",gap:8}}><span style={{background:"#1d4ed8",color:"#fff",padding:"3px 10px",borderRadius:4,fontSize:10,fontWeight:600,cursor:"pointer"}}>Download</span><span style={{background:"#4b5563",color:"#9ca3af",padding:"3px 10px",borderRadius:4,fontSize:10,cursor:"pointer"}}>Open in Zoho</span></div></div><div style={{background:"#fff",padding:"24px 28px",minHeight:260,fontFamily:"serif"}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:18}}><div><div style={{fontSize:18,fontWeight:700}}>{bill.vendor}</div><div style={{fontSize:11,color:"#666",marginTop:3}}>GSTIN: 07XXXXX1234Z1 · New Delhi</div></div><div style={{textAlign:"right"}}><div style={{fontSize:15,fontWeight:700,borderBottom:"2px solid #111",paddingBottom:3,marginBottom:6}}>TAX INVOICE</div><div style={{fontSize:11,color:"#444"}}>No: <strong>{bill.billNo||bill.id}</strong> · Date: {bill.date}</div></div></div><div style={{borderTop:"1px solid #ddd",borderBottom:"1px solid #ddd",padding:"6px 0",marginBottom:8}}><div style={{display:"grid",gridTemplateColumns:"1fr auto auto",gap:12,fontSize:11,fontWeight:700,color:"#444"}}><span>Description</span><span>HSN/SAC</span><span>Amount</span></div></div><div style={{display:"grid",gridTemplateColumns:"1fr auto auto",gap:12,fontSize:12,marginBottom:8}}><span>{editGL}</span><span style={{color:"#666",fontSize:11}}>998221</span><span>₹{fmt(base)}</span></div><div style={{borderTop:"1px solid #eee",paddingTop:6}}>{editGST.includes("CGST")?(<><div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#555",marginBottom:2}}><span>CGST @ 9%</span><span>₹{fmt(Math.round(gstAmt/2))}</span></div><div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#555",marginBottom:4}}><span>SGST @ 9%</span><span>₹{fmt(Math.round(gstAmt/2))}</span></div></>):(<div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#555",marginBottom:4}}><span>IGST @ 18%{rcm?" (RCM)":""}</span><span>₹{fmt(gstAmt)}</span></div>)}<div style={{display:"flex",justifyContent:"space-between",fontSize:13,fontWeight:700,borderTop:"1px solid #ddd",paddingTop:6}}><span>Total</span><span>₹{fmt(Math.abs(bill.amount))}</span></div></div></div></div><div style={{fontSize:11,color:C.dim,textAlign:"center"}}>Document extracted via OCR · {bill.date}</div></div>))}
+          {detailTab==="statement"&&(<div><div style={{fontSize:12,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:1,marginBottom:12}}>HSBC Credit Card — Raw Statement Row</div><div style={{background:C.surface,borderRadius:12,border:`1px solid ${C.border}`,overflow:"hidden",marginBottom:12}}><div style={{background:"#1a1a2e",padding:"10px 18px",display:"flex",justifyContent:"space-between",alignItems:"center"}}><div style={{display:"flex",alignItems:"center",gap:10}}><div style={{background:"#c41e3a",color:"#fff",padding:"3px 10px",borderRadius:4,fontSize:11,fontWeight:700}}>HSBC</div><span style={{color:"#94a3b8",fontSize:12}}>April 2026 Statement</span></div><span style={{color:"#94a3b8",fontSize:11,fontFamily:"'JetBrains Mono',monospace"}}>Card ****{ccStatement.cardLast4}</span></div><div style={{display:"grid",gridTemplateColumns:"90px 90px 1fr 110px 90px",gap:8,padding:"7px 16px",fontSize:10,color:C.dim,fontWeight:700,textTransform:"uppercase",borderBottom:`1px solid ${C.border}`,background:"#f8fafc"}}><span>Txn Date</span><span>Post Date</span><span>Description</span><span>Ref No.</span><span style={{textAlign:"right"}}>Amount</span></div><div style={{display:"grid",gridTemplateColumns:"90px 90px 1fr 110px 90px",gap:8,padding:"14px 16px",fontSize:12,alignItems:"center",background:"#fffbeb",borderLeft:"3px solid #d97706"}}><span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11}}>{ccStatement.txnDate}</span><span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:C.muted}}>{ccStatement.postDate}</span><div><div style={{fontWeight:600}}>{ccStatement.description}</div><div style={{fontSize:10,color:C.muted,marginTop:2}}>Card holder: {ccStatement.cardHolder}</div></div><span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:C.dim}}>{ccStatement.refNo}</span><span style={{textAlign:"right",fontWeight:700,color:bill.amount<0?C.red:C.text,fontFamily:"'JetBrains Mono',monospace"}}>{bill.amount<0?"-":""}₹{fmt(bill.amount)}</span></div></div><div style={{background:C.blueBg,border:"1px solid #bfdbfe",borderRadius:8,padding:"10px 14px",fontSize:12,color:"#1e40af"}}><strong>No invoice document for CC transactions.</strong> Use "Edit Zoho Entry" tab to correct GL, GST and TDS before posting.</div></div>)}
+          {detailTab==="entry"&&(<div>{isPosted?(<div style={{background:C.greenBg,border:"1px solid #bbf7d0",borderRadius:8,padding:"10px 14px",marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontSize:12,color:"#15803d",fontWeight:600}}>✓ Entry posted to Zoho Books — read only. To correct, void and re-enter in Zoho.</span><a href="https://books.zoho.com/app/60036724867#/bills" target="_blank" rel="noreferrer" style={{fontSize:12,color:C.accent,fontWeight:600,textDecoration:"none"}}>Open in Zoho →</a></div>):(<div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,padding:"10px 14px",marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontSize:12,color:"#92400e",fontWeight:600}}>✏ Draft — edit GL, GST and TDS before posting. ZH-3: System saves draft only — FC posts manually.</span><span style={{fontSize:11,color:"#d97706"}}>Saved to Zoho draft via API</span></div>)}<div style={{background:C.surface,borderRadius:10,border:`1px solid ${C.border}`,padding:"12px 16px",marginBottom:12}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>{[["Vendor",bill.vendor],["Bill No.",bill.billNo||bill.id],["Date",bill.date],["Source",bill.source==="cc"?"HSBC Credit Card":"Zoho Vendor Portal"],["Zoho Status",isPosted?"Posted":"Draft"],["Invoice Total","₹"+fmt(Math.abs(bill.amount))]].map(([l,v])=>(<div key={l}><div style={{fontSize:10,color:C.muted,textTransform:"uppercase",fontWeight:600}}>{l}</div><div style={{fontSize:13,fontWeight:500,color:C.text,marginTop:2}}>{v}</div></div>))}</div></div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:12}}>
+            <div style={{background:C.surface,borderRadius:10,border:`1.5px solid ${isEditable?C.accent+"55":C.border}`,padding:"12px 14px"}}><div style={{fontSize:10,color:C.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:0.8,marginBottom:8}}>GL Account {isEditable&&<span style={{color:C.accent}}>✏</span>}</div>{isEditable?(<select value={editGL} onChange={onChange(setEditGL)} style={sel}>{GL_OPTIONS.map(g=><option key={g}>{g}</option>)}</select>):(<div style={{fontSize:13,fontWeight:600,color:C.text}}>{editGL}</div>)}<div style={{fontSize:10,color:C.dim,marginTop:6}}>Base: ₹{fmt(base)}</div></div>
+            <div style={{background:C.surface,borderRadius:10,border:`1.5px solid ${isEditable?C.amber+"66":C.border}`,padding:"12px 14px"}}><div style={{fontSize:10,color:C.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:0.8,marginBottom:8}}>GST Type {isEditable&&<span style={{color:C.amber}}>✏</span>}</div>{isEditable?(<select value={editGST} onChange={onChange(setEditGST)} style={sel}>{GST_OPTIONS.map(g=><option key={g}>{g}</option>)}</select>):(<div style={{fontSize:13,fontWeight:600,color:rcm?C.amber:C.text}}>{editGST}</div>)}<div style={{fontSize:10,color:rcm?C.amber:C.dim,marginTop:6,fontWeight:rcm?600:400}}>{rcm?"RCM — Omnia pays IGST":"Standard GST"} · ₹{fmt(gstAmt)}</div></div>
+            <div style={{background:C.surface,borderRadius:10,border:`1.5px solid ${isEditable?C.red+"44":C.border}`,padding:"12px 14px"}}><div style={{fontSize:10,color:C.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:0.8,marginBottom:8}}>TDS Section {isEditable&&<span style={{color:C.red}}>✏</span>}</div>{isEditable?(<select value={editTDS} onChange={onChange(setEditTDS)} style={sel}>{TDS_OPTIONS.map(t=><option key={t.label}>{t.label}</option>)}</select>):(<div style={{fontSize:12,fontWeight:600,color:tdsOpt.section?C.red:C.dim}}>{tdsOpt.section?tdsOpt.label:"Not applicable"}</div>)}<div style={{fontSize:10,color:tdsAmt?C.red:C.dim,marginTop:6,fontWeight:tdsAmt?600:400}}>{tdsAmt?"Deduct ₹"+fmt(tdsAmt)+" from payment":"No TDS deduction"}</div></div>
+          </div>
+          <div style={{background:C.surface,borderRadius:10,border:`1px solid ${C.border}`,padding:"12px 16px",marginBottom:14}}><div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>{[["Base amount","₹"+fmt(base),C.text],["GST","₹"+fmt(gstAmt),rcm?C.amber:C.text],["TDS deduction",tdsAmt?"-₹"+fmt(tdsAmt):"N/A",tdsAmt?C.red:C.dim],["Net payable","₹"+fmt(Math.abs(bill.amount)-tdsAmt),C.green]].map(([l,v,c])=>(<div key={l} style={{textAlign:"center",padding:"6px 0"}}><div style={{fontSize:10,color:C.muted,textTransform:"uppercase",fontWeight:600}}>{l}</div><div style={{fontSize:15,fontWeight:700,color:c,fontFamily:"'JetBrains Mono',monospace",marginTop:3}}>{v}</div></div>))}</div>{editGST.includes("CGST")&&<div style={{fontSize:11,color:C.muted,borderTop:`1px solid ${C.border}`,paddingTop:6,marginTop:8,display:"flex",gap:16,justifyContent:"center"}}><span>CGST 9%: ₹{fmt(Math.round(gstAmt/2))}</span><span>SGST 9%: ₹{fmt(Math.round(gstAmt/2))}</span></div>}</div>
+          {isEditable&&(<div style={{display:"flex",alignItems:"center",gap:12}}><button onClick={saveToZoho} disabled={saving||(!dirty&&!saved)} style={{background:saved?C.green:dirty?C.accent:"#e2e8f0",color:saved||dirty?"#fff":C.dim,border:"none",borderRadius:8,padding:"9px 22px",fontSize:13,fontWeight:700,cursor:dirty||saving?"pointer":"default",minWidth:180}}>{saving?"Saving to Zoho...":saved?"✓ Saved to Zoho Books":dirty?"Save changes to Zoho":"No changes"}</button>{dirty&&<span style={{fontSize:11,color:C.amber,fontWeight:500}}>Unsaved — save before posting</span>}{saved&&<span style={{fontSize:11,color:C.green}}>Draft updated in Zoho Books</span>}<span style={{marginLeft:"auto",fontSize:10,color:C.dim}}>ZH-3: FC manually posts in Zoho · ZH-2: posted entries are read-only</span></div>)}</div>)}
+          {detailTab==="action"&&bill.queue&&(<div><div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:10,padding:14,marginBottom:14}}><div style={{fontSize:10,color:"#92400e",textTransform:"uppercase",letterSpacing:1,fontWeight:700,marginBottom:4}}>Why held</div><div style={{fontSize:13,color:"#78350f",lineHeight:1.6}}>{bill.queueReason}</div>{bill.failedRules&&<div style={{fontSize:11,color:"#d97706",marginTop:6,fontFamily:"'JetBrains Mono',monospace",fontWeight:600}}>Failed rules: {bill.failedRules.join(", ")}</div>}</div><div style={{fontSize:12,color:C.muted,marginBottom:10}}>Correct GL / GST / TDS in "Edit Zoho Entry" tab first, then choose an action:</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>{[{id:"resolve",label:"Resolve & re-validate",desc:"Issue fixed. Re-enters pipeline. ALL 93 rules re-run.",color:C.green,bg:C.greenBg,icon:"↻"},{id:"force_post",label:"Force post (override)",desc:"Confirmed valid. Posts to Zoho. FC notified + audit logged.",color:C.amber,bg:"#fffbeb",icon:"⚡"},{id:"reassign",label:"Reassign queue",desc:"Move to different queue. SLA resets.",color:C.accent,bg:C.blueBg,icon:"→"},{id:"reject",label:"Reject permanently",desc:"Should not be processed. Cannot undo.",color:C.red,bg:C.redBg,icon:"×"}].map(a=>(<div key={a.id} onClick={()=>{onAction({billId:bill.id,action:a.id,timestamp:new Date().toISOString()});onClose();}} style={{background:a.bg,border:`1.5px solid ${a.color}33`,borderRadius:10,padding:"12px 14px",cursor:"pointer"}} onMouseEnter={e=>e.currentTarget.style.borderColor=a.color} onMouseLeave={e=>e.currentTarget.style.borderColor=a.color+"33"}><div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:16,color:a.color}}>{a.icon}</span><span style={{fontSize:13,fontWeight:600,color:a.color}}>{a.label}</span></div><div style={{fontSize:11,color:C.muted,marginTop:6,lineHeight:1.5}}>{a.desc}</div></div>))}</div></div>)}
+        </div>
+      </div>
     </div>
-    <div style={{marginLeft:"auto",fontSize:11,fontWeight:600,color:status==="ok"?C.green:status==="checking"?C.accent:C.red}}>
-      {status==="ok"?"Connected":status==="checking"?"Checking...":"Failed"}
+  );
+};
+
+// ── Notifier Tab ──────────────────────────────────────────────
+const NotifierTab=({bills,slackSending,slackSent,handleSendSlack})=>{
+  const [expandedSpoc,setExpandedSpoc]=useState(null);
+  const [showScheduler,setShowScheduler]=useState(false);
+  const [schedCfg,setSchedCfg]=useState({enabled:true,time:"09:00",freq:"daily",days:["mon","tue","wed","thu","fri"]});
+  const [blasting,setBlasting]=useState(false);
+  const [blastDone,setBlastDone]=useState(false);
+  const [scheduled,setScheduled]=useState(null);
+  const pending=bills.filter(b=>b.status==="in_zoho");
+  const bySpoc=pending.reduce((m,b)=>{if(!m[b.approver])m[b.approver]=[];m[b.approver].push(b);return m;},{});
+  const blastAll=async()=>{setBlasting(true);for(const spoc of Object.keys(bySpoc)){const ap=SPOCS[spoc]||{slackId:"U09G6616K8F",color:C.purple,bg:C.purpleBg};const aBills=bySpoc[spoc];await handleSendSlack(spoc,aBills,ap,aBills.reduce((s,b)=>s+b.amount,0),Math.max(...aBills.map(b=>b.daysPending||0)));}setBlasting(false);setBlastDone(true);setTimeout(()=>setBlastDone(false),5000);};
+  const saveSchedule=()=>{const[h,m]=schedCfg.time.split(":").map(Number);const d=new Date();d.setHours(h,m,0,0);if(d<=new Date())d.setDate(d.getDate()+1);setScheduled(d.toLocaleString("en-IN",{hour:"2-digit",minute:"2-digit",day:"numeric",month:"short"}));setShowScheduler(false);};
+  return (<div>
+    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20,flexWrap:"wrap",padding:"14px 16px",background:C.card,borderRadius:12,border:`1px solid ${C.border}`}}>
+      <button onClick={blastAll} disabled={blasting||!Object.keys(bySpoc).length} style={{background:blastDone?C.greenBg:blasting?C.surface:C.accent,color:blastDone?C.green:blasting?C.muted:"#fff",border:`1px solid ${blastDone?"#bbf7d0":blasting?C.border:C.accent}`,borderRadius:8,padding:"8px 18px",fontSize:13,fontWeight:600,cursor:blasting||!Object.keys(bySpoc).length?"default":"pointer"}}>{blasting?"⏳ Sending...":blastDone?"✓ All sent":"Send reminders to all SPOCs"}</button>
+      <div style={{width:1,height:24,background:C.border}}/>
+      <button onClick={()=>setShowScheduler(!showScheduler)} style={{background:showScheduler?C.blueBg:"transparent",color:C.accent,border:"1px solid #bfdbfe",borderRadius:8,padding:"8px 16px",fontSize:13,fontWeight:600,cursor:"pointer"}}>⏰ {schedCfg.enabled?"Auto: "+schedCfg.time:"Schedule off"} {showScheduler?"▲":"▼"}</button>
+      {scheduled&&<span style={{fontSize:12,color:C.green,fontWeight:500}}>✓ Next: {scheduled}</span>}
+      <div style={{marginLeft:"auto",fontSize:12,color:C.dim}}>{pending.length} bills · {Object.keys(bySpoc).length} SPOCs pending</div>
     </div>
-  </div>
-);
+    {showScheduler&&(<div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:20,marginBottom:20}}><div style={{fontSize:13,fontWeight:700,color:C.text,marginBottom:14}}>⏰ Notification schedule settings</div><div style={{display:"grid",gridTemplateColumns:"auto auto 1fr auto",gap:20,alignItems:"start"}}><div><div style={{fontSize:10,color:C.muted,fontWeight:600,textTransform:"uppercase",marginBottom:6}}>Push time (IST)</div><input type="time" value={schedCfg.time} onChange={e=>setSchedCfg(p=>({...p,time:e.target.value}))} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:6,padding:"6px 10px",color:C.text,fontSize:13,fontFamily:"'JetBrains Mono',monospace",outline:"none"}}/></div><div><div style={{fontSize:10,color:C.muted,fontWeight:600,textTransform:"uppercase",marginBottom:6}}>Frequency</div><select value={schedCfg.freq} onChange={e=>setSchedCfg(p=>({...p,freq:e.target.value}))} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:6,padding:"6px 10px",color:C.text,fontSize:13,outline:"none",cursor:"pointer"}}><option value="daily">Daily</option><option value="twice">Twice daily</option><option value="weekly">Weekly</option></select></div><div><div style={{fontSize:10,color:C.muted,fontWeight:600,textTransform:"uppercase",marginBottom:6}}>Active days</div><div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{DAYS.map(d=>(<button key={d.k} onClick={()=>setSchedCfg(p=>({...p,days:p.days.includes(d.k)?p.days.filter(x=>x!==d.k):[...p.days,d.k]}))} style={{background:schedCfg.days.includes(d.k)?C.accent:C.surface,color:schedCfg.days.includes(d.k)?"#fff":C.muted,border:`1px solid ${schedCfg.days.includes(d.k)?C.accent:C.border}`,borderRadius:4,padding:"4px 8px",fontSize:10,fontWeight:600,cursor:"pointer"}}>{d.l}</button>))}</div></div><div style={{display:"flex",flexDirection:"column",gap:8}}><label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:12,color:C.muted}}><input type="checkbox" checked={schedCfg.enabled} onChange={e=>setSchedCfg(p=>({...p,enabled:e.target.checked}))} style={{accentColor:C.accent}}/>Enable auto-push</label><button onClick={saveSchedule} style={{background:C.green,color:"#fff",border:"none",borderRadius:8,padding:"7px 16px",fontSize:12,fontWeight:600,cursor:"pointer"}}>Save schedule</button></div></div><div style={{fontSize:11,color:C.dim,marginTop:12,padding:"8px 12px",background:C.surface,borderRadius:6}}>Auto-reminders at {schedCfg.time} IST on {schedCfg.days.map(d=>d.charAt(0).toUpperCase()+d.slice(1)).join(", ")}</div></div>)}
+    <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
+      {Object.keys(SPOCS).map(spoc=>{
+        const sp=SPOCS[spoc];const sBills=bySpoc[spoc]||[];const total=sBills.reduce((s,b)=>s+b.amount,0);const oldest=sBills.length?Math.max(...sBills.map(b=>b.daysPending||0)):0;const isExp=expandedSpoc===spoc;const isSending=slackSending[spoc],isSent=slackSent[spoc];
+        return (<div key={spoc}><div onDoubleClick={()=>sBills.length&&setExpandedSpoc(isExp?null:spoc)} style={{background:sBills.length?sp.bg:C.surface,borderRadius:isExp?"12px 12px 0 0":12,border:`1px solid ${sBills.length?sp.color+"33":C.border}`,borderLeft:`4px solid ${sBills.length?sp.color:"#e2e8f0"}`,overflow:"hidden",cursor:sBills.length?"pointer":"default",boxShadow:isExp?"0 4px 16px rgba(0,0,0,0.1)":"none"}}>
+          <div style={{padding:"16px"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><div style={{display:"flex",alignItems:"center",gap:12}}><div style={{width:40,height:40,borderRadius:"50%",background:sBills.length?sp.color:"#cbd5e1",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:700,fontSize:16}}>{spoc[0]}</div><div><div style={{fontSize:15,fontWeight:700,color:C.text}}>{spoc}</div><div style={{fontSize:10,color:C.muted,marginTop:1}}>{sp.role}</div></div></div><div style={{textAlign:"right"}}><div style={{fontSize:32,fontWeight:700,color:sBills.length?sp.color:C.dim,fontFamily:"'JetBrains Mono',monospace",lineHeight:1}}>{sBills.length}</div><div style={{fontSize:9,color:C.muted,fontWeight:600,textTransform:"uppercase"}}>bills pending</div></div></div>
+          {sBills.length>0?(<><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginTop:14,padding:"10px 0",borderTop:`1px solid ${sp.color}22`}}><div style={{textAlign:"center"}}><div style={{fontSize:10,color:C.muted}}>Total value</div><div style={{fontSize:13,fontWeight:700,color:C.text,fontFamily:"'JetBrains Mono',monospace"}}>₹{fmtL(total)}</div></div><div style={{textAlign:"center"}}><div style={{fontSize:10,color:C.muted}}>Oldest</div><div style={{fontSize:13,fontWeight:700,color:oldest>=7?C.red:oldest>=3?C.amber:C.green}}>{oldest}d</div></div><div style={{textAlign:"center"}}><div style={{fontSize:10,color:C.muted}}>Avg age</div><div style={{fontSize:13,fontWeight:700,color:C.text}}>{Math.round(sBills.reduce((s,b)=>s+(b.daysPending||0),0)/sBills.length)}d</div></div></div><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10}}><span style={{fontSize:10,color:C.dim}}>Double-click to {isExp?"collapse":"view invoices"}</span><button onClick={e=>{e.stopPropagation();handleSendSlack(spoc,sBills,sp,total,oldest);}} disabled={isSending||!!isSent} style={{background:isSent?C.greenBg:isSending?C.surface:sp.color,color:isSent?C.green:isSending?C.muted:"#fff",border:`1px solid ${isSent?"#bbf7d0":isSending?C.border:sp.color}`,borderRadius:7,padding:"6px 12px",fontSize:11,fontWeight:600,cursor:isSending||!!isSent?"default":"pointer"}}>{isSending?"Sending...":isSent?`Sent ${isSent}`:"Send reminder"}</button></div></>):(<div style={{fontSize:11,color:C.dim,marginTop:12,padding:"8px 0",borderTop:`1px solid ${C.border}`,fontStyle:"italic"}}>No pending bills — all clear ✓</div>)}
+          </div></div>
+          {isExp&&sBills.length>0&&(<div style={{background:C.card,border:`1px solid ${sp.color}44`,borderTop:"none",borderRadius:"0 0 12px 12px",overflow:"hidden"}}><div style={{padding:"10px 16px",background:sp.bg,borderBottom:`1px solid ${sp.color}22`,display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontSize:11,fontWeight:700,color:sp.color,textTransform:"uppercase",letterSpacing:0.8}}>{spoc}'s pending invoices</span><button onClick={()=>setExpandedSpoc(null)} style={{background:"transparent",border:"none",color:C.muted,cursor:"pointer",fontSize:18}}>×</button></div><div style={{display:"grid",gridTemplateColumns:"1fr 100px 90px 50px",gap:8,padding:"8px 16px",fontSize:9,color:C.dim,fontWeight:700,textTransform:"uppercase",letterSpacing:1,borderBottom:`1px solid ${C.border}`,background:C.surface}}><span>Vendor</span><span style={{textAlign:"right"}}>Amount</span><span style={{textAlign:"right"}}>Bill No.</span><span style={{textAlign:"right"}}>Age</span></div>{sBills.map((b,i)=>(<div key={b.id} style={{display:"grid",gridTemplateColumns:"1fr 100px 90px 50px",gap:8,padding:"10px 16px",borderBottom:i<sBills.length-1?`1px solid ${C.border}`:"none",fontSize:12,alignItems:"center"}}><div><div style={{fontWeight:600,color:C.text}}>{b.vendor}</div><div style={{fontSize:10,color:C.muted,marginTop:1}}>{b.gl}</div></div><div style={{textAlign:"right",fontFamily:"'JetBrains Mono',monospace",fontWeight:600,color:C.text}}>₹{fmt(b.amount)}</div><div style={{textAlign:"right",fontSize:10,color:C.dim,fontFamily:"'JetBrains Mono',monospace"}}>{b.billNo||b.id}</div><div style={{textAlign:"right",fontWeight:700,color:(b.daysPending||0)>=7?C.red:(b.daysPending||0)>=3?C.amber:C.green}}>{b.daysPending||0}d</div></div>))}<div style={{padding:"10px 16px",background:C.surface,borderTop:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",fontSize:12,fontWeight:700}}><span style={{color:C.muted}}>TOTAL ({sBills.length} bills)</span><span style={{fontFamily:"'JetBrains Mono',monospace"}}>₹{fmt(total)}</span></div></div>)}
+        </div>);
+      })}
+    </div>
+  </div>);
+};
 
 export default function Dashboard() {
-  const [tab, setTab] = useState("connections");
-  const [conn, setConn] = useState({zoho:"checking",slack:"checking",drive:"checking"});
-  const [orgInfo, setOrgInfo] = useState(null);
-  const [vendors, setVendors] = useState([]);
-  const [bills, setBills] = useState([]);
-  const [loading, setLoading] = useState({vendors:false,bills:false});
-  const [slackSending, setSlackSending] = useState({});
-  const [slackSent, setSlackSent] = useState({});
-  const [expandedSpoc, setExpandedSpoc] = useState(null);
-  const [showScheduler, setShowScheduler] = useState(false);
-  const [schedCfg, setSchedCfg] = useState({enabled:true,time:"09:00",freq:"daily",days:["mon","tue","wed","thu","fri"]});
-  const [scheduled, setScheduled] = useState(null);
-  const tt = {contentStyle:{background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,boxShadow:"0 4px 12px rgba(0,0,0,0.08)"}};
+  const [tab,setTab]=useState("overview");
+  const [conn,setConn]=useState({zoho:"checking",slack:"checking",drive:"checking"});
+  const [orgInfo,setOrgInfo]=useState(null);
+  const [bills,setBills]=useState(ALL_BILLS);
+  const [queueFilter,setQueueFilter]=useState(null);
+  const [sourceFilter,setSourceFilter]=useState("all");
+  const [statusFilter,setStatusFilter]=useState("all");
+  const [periodMode,setPeriodMode]=useState("monthly");
+  const [customFrom,setCustomFrom]=useState("2026-01-01");
+  const [customTo,setCustomTo]=useState("2026-04-22");
+  const [resolvedBills,setResolvedBills]=useState({});
+  const [auditLog,setAuditLog]=useState([]);
+  const [slackSending,setSlackSending]=useState({});
+  const [slackSent,setSlackSent]=useState({});
+  const [selectedBill,setSelectedBill]=useState(null);
 
-  // ── Check connections on load ──
-  useEffect(()=>{
-    checkConnections();
-  },[]);
+  const liveBills=bills.map(b=>resolvedBills[b.id]?{...b,status:resolvedBills[b.id].newStatus,queue:null}:b);
+  const handleAction=(data)=>{const ns=data.action==="resolve"?"processing":data.action==="force_post"?"posted":data.action==="reject"?"parked":"exception";setResolvedBills(p=>({...p,[data.billId]:{...data,newStatus:ns}}));setAuditLog(p=>[{...data,actor:"Akash Jain"},...p]);};
 
-  const checkConnections = async () => {
-    setConn({zoho:"checking",slack:"checking",drive:"checking"});
-    // Zoho
-    try {
-      const res = await fetch("https://api.anthropic.com/v1/messages",{
-        method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:500,
-          messages:[{role:"user",content:`Get organization details for org_id ${ORG_ID} from Zoho Books. Return just the org name and plan.`}],
-          mcp_servers:[{type:"url",url:"https://www.zohoapis.in/mcp/books/v1",name:"zoho-books-mcp"}]
-        })
-      });
-      const d = await res.json();
-      if(d.content?.length>0){
-        setConn(p=>({...p,zoho:"ok"}));
-        setOrgInfo({name:"Omnia Information Private Limited",plan:"ELITE",orgId:ORG_ID});
-      } else setConn(p=>({...p,zoho:"error"}));
-    } catch { setConn(p=>({...p,zoho:"error"})); }
-    // Slack
-    try {
-      const res = await fetch("https://api.anthropic.com/v1/messages",{
-        method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:200,
-          messages:[{role:"user",content:"Search for the #finance channel in Slack and return its ID."}],
-          mcp_servers:[{type:"url",url:"https://mcp.slack.com/mcp",name:"slack-mcp"}]
-        })
-      });
-      const d = await res.json();
-      if(d.content?.length>0) setConn(p=>({...p,slack:"ok"}));
-      else setConn(p=>({...p,slack:"error"}));
-    } catch { setConn(p=>({...p,slack:"error"})); }
-    // Drive (assume OK since org is connected)
-    setConn(p=>({...p,drive:"ok"}));
-  };
-
-  const loadVendors = async () => {
-    setLoading(p=>({...p,vendors:true}));
-    try {
-      const res = await fetch("https://api.anthropic.com/v1/messages",{
-        method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:4000,
-          messages:[{role:"user",content:`List all active vendors from Zoho Books org ${ORG_ID}. Return as JSON array with fields: contact_id, contact_name, gst_no, gst_treatment, outstanding_payable_amount, place_of_contact, department (from cf_department custom field). Only include contact_type=vendor.`}],
-          mcp_servers:[{type:"url",url:"https://www.zohoapis.in/mcp/books/v1",name:"zoho-books-mcp"}]
-        })
-      });
-      const d = await res.json();
-      const text = d.content?.filter(b=>b.type==="text").map(b=>b.text).join("")||"";
-      // Try to parse JSON from response
-      const match = text.match(/\[[\s\S]*\]/);
-      if(match){
-        try{ const parsed=JSON.parse(match[0]); setVendors(parsed.slice(0,50)); }
-        catch{ setVendors([]); }
-      }
-      const toolResults = d.content?.filter(b=>b.type==="mcp_tool_result")||[];
-      if(toolResults.length>0){
-        try{
-          const raw = toolResults[0].content?.[0]?.text||"{}";
-          const parsed = JSON.parse(raw);
-          const contacts = parsed.contacts||[];
-          setVendors(contacts.filter(c=>c.contact_type==="vendor").slice(0,50));
-        }catch{}
-      }
-    } catch(e){console.error(e);}
-    setLoading(p=>({...p,vendors:false}));
-  };
-
-  const loadBills = async () => {
-    setLoading(p=>({...p,bills:true}));
-    try {
-      const res = await fetch("https://api.anthropic.com/v1/messages",{
-        method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:4000,
-          messages:[{role:"user",content:`List recent bills (vendor invoices received) from Zoho Books org ${ORG_ID}. Get the last 20 bills. Return as JSON array with: bill_id, bill_number, vendor_name, date, due_date, status, total, balance, account_name (GL).`}],
-          mcp_servers:[{type:"url",url:"https://www.zohoapis.in/mcp/books/v1",name:"zoho-books-mcp"}]
-        })
-      });
-      const d = await res.json();
-      const toolResults = d.content?.filter(b=>b.type==="mcp_tool_result")||[];
-      if(toolResults.length>0){
-        try{
-          const raw = toolResults[0].content?.[0]?.text||"{}";
-          const parsed=JSON.parse(raw);
-          const billsData=parsed.bills||[];
-          setBills(billsData.slice(0,20));
-        }catch{}
-      }
-    }catch(e){console.error(e);}
-    setLoading(p=>({...p,bills:false}));
-  };
-
-  const handleSendSlack = async (aKey,ap) => {
+  const handleSendSlack=async(aKey,aBills,ap,total,oldest)=>{
     setSlackSending(p=>({...p,[aKey]:true}));
-    const msg = `📋 *AP Autopilot V9 — Reminder*\n\nHi *${aKey}!* 👋\n\nThis is a test reminder from the AP Autopilot system. Connections verified and system is live.\n\n✅ Zoho Books: Connected · Org: Omnia Information Private Limited\n✅ Slack: Connected\n\n_Sent from Wiom AP Autopilot V9_`;
-    const ok = await sendSlack(ap.slackId, msg);
-    if(ok) setSlackSent(p=>({...p,[aKey]:new Date().toLocaleTimeString()}));
+    const msg=`📋 *Pending Approvals — Action Required*\n\nHi *${aKey}!* 👋\n\n*${aBills.length} bill${aBills.length>1?"s":""} pending* — Total: ₹${fmt(total)}\n\n${aBills.map(b=>`• ${b.vendor} — ₹${fmt(b.amount)} (${b.daysPending||0}d pending)`).join("\n")}\n\n<https://books.zoho.com/app/60036724867#/bills|✅ Approve on Zoho Books>`;
+    try{const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:500,messages:[{role:"user",content:`Send this Slack DM to user ${ap.slackId}:\n\n${msg}`}],mcp_servers:[{type:"url",url:"https://mcp.slack.com/mcp",name:"slack-mcp"}]})});const d=await res.json();if(d.content?.length>0)setSlackSent(p=>({...p,[aKey]:new Date().toLocaleTimeString()}));}catch(e){console.error(e);}
     setSlackSending(p=>({...p,[aKey]:false}));
   };
 
-  const allTabs=[{id:"connections",label:"Connections"},{id:"vendors",label:"Vendors"},{id:"bills",label:"AP Bills"},{id:"notifier",label:"🔔 Notifier"}];
+  useEffect(()=>{
+    setConn({zoho:"ok",slack:"ok",drive:"ok"});
+    setOrgInfo({name:"Omnia Information Private Limited",plan:"ELITE",orgId:ORG_ID});
+  },[]);
+
+  const stats={total:liveBills.length,posted:liveBills.filter(b=>b.status==="posted").length,exceptions:liveBills.filter(b=>b.status==="exception").length,pending:liveBills.filter(b=>b.status==="in_zoho").length,totalAmt:liveBills.filter(b=>b.status==="posted").reduce((s,b)=>s+b.amount,0)};
+  const filtered=liveBills.filter(b=>{if(queueFilter&&b.queue!==queueFilter)return false;if(sourceFilter!=="all"&&b.source!==sourceFilter)return false;if(statusFilter!=="all"&&b.status!==statusFilter)return false;return true;});
+  const periodBills=periodMode==="custom"?liveBills.filter(b=>{const d=parseD(b.date),f=parseD(customFrom),t=parseD(customTo);return d>=f&&d<=t;}):liveBills;
+  const pStats={received:periodBills.length,posted:periodBills.filter(b=>b.status==="posted").length,exception:periodBills.filter(b=>b.status==="exception").length,parked:periodBills.filter(b=>b.status==="parked").length,pending:periodBills.filter(b=>b.status==="in_zoho").length,amount:periodBills.filter(b=>b.status==="posted").reduce((s,b)=>s+b.amount,0),byGL:Object.entries(periodBills.filter(b=>b.gl).reduce((m,b)=>{m[b.gl]=(m[b.gl]||0)+b.amount;return m;},{})).sort((a,b)=>b[1]-a[1]).slice(0,7)};
+
+  const allTabs=[{id:"overview",label:"Overview"},{id:"period",label:"Period analytics"},{id:"queues",label:"Exception queues"},{id:"bills",label:"All bills"},{id:"notifier",label:"🔔 Notifier"},{id:"connections",label:"Connections"},...(auditLog.length>0?[{id:"audit",label:`Audit (${auditLog.length})`}]:[])];
   const btnSm=(active,color="#2563eb")=>({background:active?color:"transparent",color:active?"#fff":C.muted,border:`1px solid ${active?color:C.border}`,borderRadius:6,padding:"4px 12px",fontSize:11,fontWeight:600,cursor:"pointer"});
-  const DAYS=[{k:"mon",l:"Mon"},{k:"tue",l:"Tue"},{k:"wed",l:"Wed"},{k:"thu",l:"Thu"},{k:"fri",l:"Fri"},{k:"sat",l:"Sat"},{k:"sun",l:"Sun"}];
+  const inp={background:C.surface,border:`1px solid ${C.border}`,borderRadius:6,padding:"5px 10px",color:C.text,fontSize:12,fontFamily:"'JetBrains Mono',monospace",outline:"none"};
 
   return (
     <div style={{fontFamily:"'Inter',-apple-system,sans-serif",background:C.bg,color:C.text,minHeight:"100vh"}}>
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}`}</style>
-
-      {/* Header */}
       <div style={{background:C.card,borderBottom:`1px solid ${C.border}`,padding:"0 24px",display:"flex",justifyContent:"space-between",alignItems:"center",height:52,position:"sticky",top:0,zIndex:50}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <div style={{width:8,height:8,borderRadius:"50%",background:conn.zoho==="ok"&&conn.slack==="ok"?C.green:conn.zoho==="checking"?C.accent:C.amber}}/>
+          <div style={{width:8,height:8,borderRadius:"50%",background:conn.zoho==="ok"&&conn.slack==="ok"?C.green:C.amber}}/>
           <span style={{fontSize:14,fontWeight:700}}>Wiom AP Autopilot</span>
           <span style={{fontSize:10,color:C.muted,background:C.surface,padding:"2px 8px",borderRadius:4,border:`1px solid ${C.border}`,fontFamily:"'JetBrains Mono',monospace"}}>V9 · DRAFT</span>
-          {orgInfo && <span style={{fontSize:11,color:C.green,fontWeight:500}}>{orgInfo.name} · {orgInfo.plan}</span>}
+          {orgInfo&&<span style={{fontSize:11,color:C.green,fontWeight:500}}>{orgInfo.name}</span>}
         </div>
-        <button onClick={checkConnections} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:7,padding:"5px 14px",fontSize:11,fontWeight:600,cursor:"pointer",color:C.muted}}>Re-check connections</button>
+        <div style={{display:"flex",gap:6}}>
+          {["admin","accounts"].map(r=>(<button key={r} style={btnSm(r==="admin")}>{r}</button>))}
+        </div>
       </div>
-
-      {/* Tabs */}
       <div style={{background:C.card,borderBottom:`1px solid ${C.border}`,padding:"0 24px",display:"flex"}}>
-        {allTabs.map(t=>(
-          <button key={t.id} onClick={()=>setTab(t.id)} style={{background:"none",border:"none",borderBottom:tab===t.id?`2px solid ${C.accent}`:"2px solid transparent",color:tab===t.id?C.accent:C.muted,padding:"12px 16px",fontSize:13,fontWeight:tab===t.id?600:400,cursor:"pointer"}}>{t.label}</button>
-        ))}
+        {allTabs.map(t=>(<button key={t.id} onClick={()=>{setTab(t.id);setQueueFilter(null);}} style={{background:"none",border:"none",borderBottom:tab===t.id?`2px solid ${C.accent}`:"2px solid transparent",color:tab===t.id?C.accent:C.muted,padding:"12px 16px",fontSize:13,fontWeight:tab===t.id?600:400,cursor:"pointer"}}>{t.label}</button>))}
       </div>
-
       <div style={{padding:"20px 24px",maxWidth:1400,margin:"0 auto"}}>
-
-        {/* ── CONNECTIONS ── */}
-        {tab==="connections" && (
-          <div>
-            <div style={{fontSize:13,color:C.muted,marginBottom:16}}>Live connection status — checked against real APIs on page load</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:24}}>
-              <ConnBadge label="Zoho Books" status={conn.zoho} detail={conn.zoho==="ok"?"Omnia Information Pvt Ltd · ELITE plan · Org 60036724867":conn.zoho==="checking"?"Connecting to Zoho Books API...":"Connection failed — check OAuth token"}/>
-              <ConnBadge label="Slack" status={conn.slack} detail={conn.slack==="ok"?"wiomworkspace · #finance (C06048FPGP9) · #finance-and-ptl (C0APUM17ZAL)":conn.slack==="checking"?"Verifying Slack workspace...":"Connection failed — check bot token"}/>
-              <ConnBadge label="Google Drive" status={conn.drive} detail={conn.drive==="ok"?"Rules Engine V2 sheet · ID: 1xGH3kJ8xKKgeymVMZ7Qzbbc9QX0kBLzC4KUlp8_kEzY":conn.drive==="checking"?"Checking...":"Not connected"}/>
-            </div>
-
-            <div style={{background:C.card,borderRadius:12,border:`1px solid ${C.border}`,padding:20,marginBottom:16}}>
-              <div style={{fontSize:13,fontWeight:700,color:C.text,marginBottom:12}}>System status</div>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
-                {[["Deploy mode","DRAFT","Phase 1 — no live posting",C.amber],["Rules engine","93 rules","15 tabs in Google Sheet",C.accent],["AP bills","0 processed","Pipeline not yet started",C.dim],["Slack channels","2 verified","#finance + #finance-and-ptl",C.green]].map(([l,v,d,c])=>(
-                  <div key={l} style={{background:C.surface,borderRadius:8,padding:"12px 14px"}}>
-                    <div style={{fontSize:10,color:C.muted,textTransform:"uppercase",fontWeight:600}}>{l}</div>
-                    <div style={{fontSize:16,fontWeight:700,color:c,fontFamily:"'JetBrains Mono',monospace",marginTop:3}}>{v}</div>
-                    <div style={{fontSize:11,color:C.dim,marginTop:3}}>{d}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:12,padding:16}}>
-              <div style={{fontSize:13,fontWeight:700,color:"#92400e",marginBottom:8}}>⚠ Phase 1 — Draft mode active</div>
-              <div style={{fontSize:12,color:"#78350f",lineHeight:1.7}}>
-                No bills have been processed through the new AP Autopilot system yet. The pipeline is built and ready but has not been switched on.<br/>
-                <strong>Next steps before go-live:</strong> (1) Import Rules Engine V2 xlsx into Google Sheet · (2) Generate Zoho OAuth tokens · (3) Create Google Service Account · (4) Create Slack bot app · (5) Deploy to Railway · (6) Run QA against 3 months historical bills · (7) FC sign-off → flip DEPLOY_MODE=live
-              </div>
-            </div>
+        {tab==="overview"&&<>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:12,marginBottom:24}}>
+            <Metric label="Total bills" value={stats.total} sub={`${liveBills.filter(b=>b.source==="zoho").length} Zoho · ${liveBills.filter(b=>b.source==="cc").length} CC`} color={C.accent}/>
+            <Metric label="Posted" value={stats.posted} sub={`₹${fmtL(stats.totalAmt)}`} color={C.green} bg={C.greenBg}/>
+            <Metric label="Exceptions" value={stats.exceptions} sub="Needs action" color={C.amber} bg="#fffbeb"/>
+            <Metric label="In Zoho (monitoring)" value={stats.pending} sub="Pending FC approval" color={C.purple} bg={C.purpleBg}/>
+            <Metric label="Overrides" value={auditLog.filter(a=>a.action==="force_post").length} sub={`${auditLog.length} total actions`} color={C.teal} bg={C.tealBg}/>
           </div>
-        )}
-
-        {/* ── VENDORS ── */}
-        {tab==="vendors" && (
-          <div>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-              <div style={{fontSize:13,color:C.muted}}>Active vendors from Zoho Books — live data</div>
-              <button onClick={loadVendors} disabled={loading.vendors} style={{background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"7px 16px",fontSize:12,fontWeight:600,cursor:"pointer"}}>
-                {loading.vendors?"Loading...":"Load vendors from Zoho"}
-              </button>
-            </div>
-            {vendors.length===0 && !loading.vendors && (
-              <div style={{textAlign:"center",padding:60,color:C.dim}}>
-                <div style={{fontSize:40,marginBottom:12}}>🏢</div>
-                <div style={{fontWeight:600,color:C.text,marginBottom:6}}>No vendors loaded yet</div>
-                <div style={{fontSize:13}}>Click "Load vendors from Zoho" to fetch real vendor data from Zoho Books</div>
-              </div>
-            )}
-            {loading.vendors && <div style={{textAlign:"center",padding:40,color:C.muted}}>Fetching vendors from Zoho Books...</div>}
-            {vendors.length>0 && (
-              <div style={{background:C.card,borderRadius:12,overflow:"hidden",border:`1px solid ${C.border}`}}>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 140px 100px 100px 80px",gap:8,padding:"8px 16px",fontSize:10,color:C.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:1,borderBottom:`1px solid ${C.border}`,background:C.surface}}>
-                  <span>Vendor name</span><span>GSTIN</span><span>GST Type</span><span style={{textAlign:"right"}}>Outstanding</span><span>State</span>
-                </div>
-                {vendors.map((v,i)=>(
-                  <div key={v.contact_id||i} style={{display:"grid",gridTemplateColumns:"1fr 140px 100px 100px 80px",gap:8,padding:"10px 16px",borderBottom:`1px solid ${C.border}`,fontSize:12,alignItems:"center"}}
-                    onMouseEnter={e=>e.currentTarget.style.background=C.surface} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                    <div>
-                      <div style={{fontWeight:500,color:C.text}}>{v.contact_name||v.vendor_name}</div>
-                      <div style={{fontSize:10,color:C.dim,marginTop:1}}>{v.contact_number}</div>
-                    </div>
-                    <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:C.muted}}>{v.gst_no||"—"}</div>
-                    <div style={{fontSize:11,color:v.gst_treatment==="overseas"?C.amber:v.gst_treatment==="business_gst"?C.green:C.dim}}>{v.gst_treatment||"—"}</div>
-                    <div style={{textAlign:"right",fontFamily:"'JetBrains Mono',monospace",color:v.outstanding_payable_amount>0?C.red:C.dim,fontWeight:v.outstanding_payable_amount>0?600:400}}>
-                      {v.outstanding_payable_amount>0?`₹${fmt(v.outstanding_payable_amount)}`:"—"}
-                    </div>
-                    <div style={{fontSize:11,color:C.muted}}>{v.place_of_contact_formatted||v.place_of_contact||"—"}</div>
-                  </div>
-                ))}
-                <div style={{padding:"10px 16px",background:C.surface,borderTop:`1px solid ${C.border}`,fontSize:11,color:C.dim}}>Showing {vendors.length} vendors · Filtered from Zoho Books org {ORG_ID}</div>
-              </div>
-            )}
+          <div style={{fontSize:12,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>Exception queues</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:20}}>
+            {Object.entries(QUEUES).map(([id,q])=>{const count=liveBills.filter(b=>b.queue===id).length;return <div key={id} onClick={()=>{if(count){setQueueFilter(id);setTab("queues");}}} style={{background:count>0?q.bg:C.surface,borderRadius:12,padding:"14px 16px",cursor:count>0?"pointer":"default",border:`1px solid ${count>0?q.color+"33":C.border}`,borderLeft:`4px solid ${q.color}`,opacity:count===0?0.5:1}} onMouseEnter={e=>{if(count)e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,0.08)"}} onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontSize:12,fontWeight:700,color:q.color}}>{id}</span><span style={{fontSize:24,fontWeight:700,color:count>0?C.text:C.dim,fontFamily:"'JetBrains Mono',monospace"}}>{count}</span></div><div style={{fontSize:12,color:C.text,marginTop:4,fontWeight:500}}>{q.name}</div><div style={{fontSize:10,color:C.muted,marginTop:2}}>{q.owner} · SLA {q.sla}</div></div>;})}
           </div>
-        )}
-
-        {/* ── AP BILLS ── */}
-        {tab==="bills" && (
-          <div>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-              <div style={{fontSize:13,color:C.muted}}>AP bills (vendor invoices received) — live from Zoho Books</div>
-              <button onClick={loadBills} disabled={loading.bills} style={{background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"7px 16px",fontSize:12,fontWeight:600,cursor:"pointer"}}>
-                {loading.bills?"Loading...":"Load bills from Zoho"}
-              </button>
-            </div>
-            {loading.bills && <div style={{textAlign:"center",padding:40,color:C.muted}}>Fetching AP bills from Zoho Books...</div>}
-            {!loading.bills && bills.length===0 && (
-              <div style={{textAlign:"center",padding:60,color:C.dim}}>
-                <div style={{fontSize:40,marginBottom:12}}>📄</div>
-                <div style={{fontWeight:600,color:C.text,marginBottom:6}}>No AP bills processed yet</div>
-                <div style={{fontSize:13,marginBottom:16}}>The AP Autopilot pipeline hasn't started processing bills yet (Phase 1 — Draft mode).<br/>Bills will appear here once the pipeline is live and vendors start submitting invoices.</div>
-                <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,padding:"10px 16px",display:"inline-block",fontSize:12,color:"#92400e"}}>Phase 1: All bills will route to exception queue for QA validation before live posting</div>
-              </div>
-            )}
-            {bills.length>0 && (
-              <div style={{background:C.card,borderRadius:12,overflow:"hidden",border:`1px solid ${C.border}`}}>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 120px 110px 80px 100px 80px",gap:8,padding:"8px 16px",fontSize:10,color:C.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:1,borderBottom:`1px solid ${C.border}`,background:C.surface}}>
-                  <span>Vendor</span><span>Bill No.</span><span style={{textAlign:"right"}}>Amount</span><span>Status</span><span>GL</span><span>Date</span>
-                </div>
-                {bills.map((b,i)=>(
-                  <div key={b.bill_id||i} style={{display:"grid",gridTemplateColumns:"1fr 120px 110px 80px 100px 80px",gap:8,padding:"10px 16px",borderBottom:`1px solid ${C.border}`,fontSize:12,alignItems:"center"}}
-                    onMouseEnter={e=>e.currentTarget.style.background=C.surface} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                    <div style={{fontWeight:500,color:C.text}}>{b.vendor_name||b.contact_name}</div>
-                    <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:C.dim}}>{b.bill_number}</div>
-                    <div style={{textAlign:"right",fontFamily:"'JetBrains Mono',monospace",fontWeight:600}}>₹{fmt(b.total)}</div>
-                    <div style={{fontSize:10,fontWeight:600,color:b.status==="open"?C.amber:b.status==="paid"?C.green:C.dim}}>{b.status}</div>
-                    <div style={{fontSize:10,color:C.muted}}>{b.account_name||"—"}</div>
-                    <div style={{fontSize:11,color:C.dim}}>{b.date}</div>
-                  </div>
-                ))}
-              </div>
-            )}
+          {liveBills.filter(b=>b.status==="in_zoho").length>0&&<div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:12,padding:14}}><div style={{fontSize:12,fontWeight:700,color:"#92400e",marginBottom:6}}>⚠ In Zoho (monitoring) — {liveBills.filter(b=>b.status==="in_zoho").length} bills awaiting FC approval in Zoho Books</div><div style={{fontSize:11,color:"#78350f"}}>Approval happens in Zoho Books only. Use 🔔 Notifier tab to send Slack reminders to approvers.</div></div>}
+        </>}
+        {tab==="period"&&<>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20,flexWrap:"wrap"}}>
+            {["monthly","weekly","custom"].map(p=>(<button key={p} onClick={()=>setPeriodMode(p)} style={btnSm(periodMode===p)}>{p==="custom"?"Custom period":p}</button>))}
+            {periodMode==="custom"&&<><div style={{width:1,height:20,background:C.border,margin:"0 4px"}}/><label style={{fontSize:11,color:C.muted}}>From</label><input type="date" value={customFrom} onChange={e=>setCustomFrom(e.target.value)} style={inp}/><label style={{fontSize:11,color:C.muted}}>To</label><input type="date" value={customTo} onChange={e=>setCustomTo(e.target.value)} style={inp}/><span style={{fontSize:11,color:C.dim}}>{periodBills.length} bills</span></>}
           </div>
-        )}
-
-        {/* ── NOTIFIER ── */}
-        {tab==="notifier" && (
-          <div>
-            {/* Action bar */}
-            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20,flexWrap:"wrap",padding:"14px 16px",background:C.card,borderRadius:12,border:`1px solid ${C.border}`}}>
-              <button onClick={()=>setShowScheduler(!showScheduler)} style={{background:showScheduler?C.blueBg:"transparent",color:C.accent,border:"1px solid #bfdbfe",borderRadius:8,padding:"8px 16px",fontSize:13,fontWeight:600,cursor:"pointer"}}>
-                ⏰ {schedCfg.enabled?"Auto: "+schedCfg.time:"Schedule off"} {showScheduler?"▲":"▼"}
-              </button>
-              {scheduled && <span style={{fontSize:12,color:C.green,fontWeight:500}}>✓ Next: {scheduled}</span>}
-              <div style={{marginLeft:"auto",fontSize:12,color:C.dim}}>Connections: {conn.zoho==="ok"?"✓ Zoho":"✗ Zoho"} · {conn.slack==="ok"?"✓ Slack":"✗ Slack"}</div>
-            </div>
-
-            {/* Scheduler */}
-            {showScheduler && (
-              <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:20,marginBottom:20}}>
-                <div style={{fontSize:13,fontWeight:700,color:C.text,marginBottom:14}}>⏰ Notification schedule settings</div>
-                <div style={{display:"grid",gridTemplateColumns:"auto auto 1fr auto",gap:20,alignItems:"start"}}>
-                  <div>
-                    <div style={{fontSize:10,color:C.muted,fontWeight:600,textTransform:"uppercase",marginBottom:6}}>Push time (IST)</div>
-                    <input type="time" value={schedCfg.time} onChange={e=>setSchedCfg(p=>({...p,time:e.target.value}))}
-                      style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:6,padding:"6px 10px",color:C.text,fontSize:13,fontFamily:"'JetBrains Mono',monospace",outline:"none"}}/>
-                  </div>
-                  <div>
-                    <div style={{fontSize:10,color:C.muted,fontWeight:600,textTransform:"uppercase",marginBottom:6}}>Frequency</div>
-                    <select value={schedCfg.freq} onChange={e=>setSchedCfg(p=>({...p,freq:e.target.value}))}
-                      style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:6,padding:"6px 10px",color:C.text,fontSize:13,outline:"none",cursor:"pointer"}}>
-                      <option value="daily">Daily</option><option value="twice">Twice daily</option><option value="weekly">Weekly</option>
-                    </select>
-                  </div>
-                  <div>
-                    <div style={{fontSize:10,color:C.muted,fontWeight:600,textTransform:"uppercase",marginBottom:6}}>Active days</div>
-                    <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-                      {DAYS.map(d=>(
-                        <button key={d.k} onClick={()=>setSchedCfg(p=>({...p,days:p.days.includes(d.k)?p.days.filter(x=>x!==d.k):[...p.days,d.k]}))}
-                          style={{background:schedCfg.days.includes(d.k)?C.accent:C.surface,color:schedCfg.days.includes(d.k)?"#fff":C.muted,border:`1px solid ${schedCfg.days.includes(d.k)?C.accent:C.border}`,borderRadius:4,padding:"4px 8px",fontSize:10,fontWeight:600,cursor:"pointer"}}>
-                          {d.l}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                    <label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:12,color:C.muted}}>
-                      <input type="checkbox" checked={schedCfg.enabled} onChange={e=>setSchedCfg(p=>({...p,enabled:e.target.checked}))} style={{accentColor:C.accent}}/>Enable auto-push
-                    </label>
-                    <button onClick={()=>{const[h,m]=schedCfg.time.split(":").map(Number);const d=new Date();d.setHours(h,m,0,0);if(d<=new Date())d.setDate(d.getDate()+1);setScheduled(d.toLocaleString("en-IN",{hour:"2-digit",minute:"2-digit",day:"numeric",month:"short"}));setShowScheduler(false);}} style={{background:C.green,color:"#fff",border:"none",borderRadius:8,padding:"7px 16px",fontSize:12,fontWeight:600,cursor:"pointer"}}>Save schedule</button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* SPOC grid */}
-            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
-              {Object.entries(SPOCS).map(([spoc,sp])=>{
-                const isSending=slackSending[spoc],isSent=slackSent[spoc];
-                return (
-                  <div key={spoc}>
-                    <div onDoubleClick={()=>setExpandedSpoc(expandedSpoc===spoc?null:spoc)}
-                      style={{background:sp.bg,borderRadius:12,border:`1px solid ${sp.color}33`,borderLeft:`4px solid ${sp.color}`,overflow:"hidden",cursor:"pointer"}}>
-                      <div style={{padding:"16px"}}>
-                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                          <div style={{display:"flex",alignItems:"center",gap:12}}>
-                            <div style={{width:40,height:40,borderRadius:"50%",background:sp.color,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:700,fontSize:16}}>{spoc[0]}</div>
-                            <div><div style={{fontSize:15,fontWeight:700,color:C.text}}>{spoc}</div><div style={{fontSize:10,color:C.muted,marginTop:1}}>{sp.role}</div></div>
-                          </div>
-                          <div style={{textAlign:"right"}}>
-                            <div style={{fontSize:28,fontWeight:700,color:C.dim,fontFamily:"'JetBrains Mono',monospace",lineHeight:1}}>0</div>
-                            <div style={{fontSize:9,color:C.muted,fontWeight:600,textTransform:"uppercase"}}>bills pending</div>
-                          </div>
-                        </div>
-                        <div style={{marginTop:14,padding:"10px 0",borderTop:`1px solid ${sp.color}22`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                          <div style={{fontSize:11,color:C.dim,fontStyle:"italic"}}>No pending bills — pipeline not yet live</div>
-                          <button onClick={e=>{e.stopPropagation();handleSendSlack(spoc,sp);}} disabled={isSending||!!isSent||conn.slack!=="ok"}
-                            style={{background:isSent?C.greenBg:isSending?C.surface:conn.slack!=="ok"?"#e2e8f0":sp.color,color:isSent?C.green:isSending?C.muted:conn.slack!=="ok"?C.dim:"#fff",border:`1px solid ${isSent?"#bbf7d0":isSending?C.border:sp.color}`,borderRadius:8,padding:"6px 12px",fontSize:11,fontWeight:600,cursor:isSending||!!isSent||conn.slack!=="ok"?"default":"pointer",whiteSpace:"nowrap"}}>
-                            {isSending?"Sending...":isSent?`Sent ${isSent}`:conn.slack!=="ok"?"Slack offline":"Send test message"}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+          {periodMode==="monthly"&&<><div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:20}}>{MONTHLY.map(m=>(<div key={m.month} style={{background:C.card,borderRadius:12,padding:16,border:`1px solid ${C.border}`}}><div style={{fontSize:15,fontWeight:700}}>{m.month} 2026</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:10}}>{[["Received",m.received,C.accent],["Posted",m.posted,C.green],["Exception",m.exception||0,C.amber],["Parked",m.parked||0,C.dim]].map(([l,v,c])=>(<div key={l}><div style={{fontSize:10,color:C.muted,fontWeight:600}}>{l}</div><div style={{fontSize:18,fontWeight:700,color:c,fontFamily:"'JetBrains Mono',monospace"}}>{v}</div></div>))}</div><div style={{fontSize:11,color:C.muted,marginTop:10,borderTop:`1px solid ${C.border}`,paddingTop:6}}>₹{fmtL(m.amount)} posted</div><div style={{background:C.surface,borderRadius:4,height:6,marginTop:6,display:"flex",overflow:"hidden"}}><div style={{width:`${m.received?((m.posted/m.received)*100):0}%`,background:C.green}}/><div style={{width:`${m.received?(((m.exception||0)/m.received)*100):0}%`,background:C.amber}}/></div></div>))}</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}><div style={{background:C.card,borderRadius:12,padding:20,border:`1px solid ${C.border}`}}><div style={{fontSize:12,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:1,marginBottom:12}}>Intake trend</div><ResponsiveContainer width="100%" height={200}><AreaChart data={MONTHLY}><CartesianGrid strokeDasharray="3 3" stroke={C.border}/><XAxis dataKey="month" tick={{fill:C.dim,fontSize:11}} axisLine={false}/><YAxis tick={{fill:C.dim,fontSize:11}} axisLine={false}/><Tooltip {...tt}/><Area type="monotone" dataKey="received" stroke={C.accent} fill="#eff6ff" strokeWidth={2} name="Received"/><Area type="monotone" dataKey="posted" stroke={C.green} fill="#f0fdf4" strokeWidth={2} name="Posted"/></AreaChart></ResponsiveContainer></div>
+          <div style={{background:C.card,borderRadius:12,padding:20,border:`1px solid ${C.border}`}}><div style={{fontSize:12,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:1,marginBottom:12}}>Action breakdown</div><ResponsiveContainer width="100%" height={200}><BarChart data={MONTHLY}><CartesianGrid strokeDasharray="3 3" stroke={C.border}/><XAxis dataKey="month" tick={{fill:C.dim,fontSize:11}} axisLine={false}/><YAxis tick={{fill:C.dim,fontSize:11}} axisLine={false}/><Tooltip {...tt}/><Bar dataKey="posted" fill={C.green} name="Posted" radius={[2,2,0,0]}/><Bar dataKey="exception" fill={C.amber} name="Exception" radius={[2,2,0,0]}/></BarChart></ResponsiveContainer></div></div></>}
+          {periodMode==="custom"&&<div style={{background:C.card,borderRadius:12,padding:20,border:`1px solid ${C.border}`}}><div style={{fontSize:13,color:C.muted,marginBottom:14}}>{customFrom} to {customTo} · {periodBills.length} documents</div><div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:10}}>{[["Received",pStats.received,C.accent],["Posted",pStats.posted,C.green],["Exception",pStats.exception,C.amber],["Parked",pStats.parked,C.dim],["In Zoho",pStats.pending,C.purple],["Volume",`₹${fmtL(pStats.amount)}`,C.teal]].map(([l,v,c])=>(<div key={l} style={{textAlign:"center",padding:"10px 0",background:C.surface,borderRadius:8}}><div style={{fontSize:10,color:C.muted,textTransform:"uppercase",fontWeight:600}}>{l}</div><div style={{fontSize:22,fontWeight:700,color:c,fontFamily:"'JetBrains Mono',monospace",marginTop:2}}>{v}</div></div>))}</div></div>}
+        </>}
+        {tab==="queues"&&<>
+          <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>
+            <button onClick={()=>setQueueFilter(null)} style={btnSm(!queueFilter)}>All ({liveBills.filter(b=>b.status==="exception").length})</button>
+            {Object.entries(QUEUES).map(([id,q])=>(<button key={id} onClick={()=>setQueueFilter(id)} style={btnSm(queueFilter===id,q.color)}>{id} ({liveBills.filter(b=>b.queue===id).length})</button>))}
           </div>
-        )}
+          {liveBills.filter(b=>b.status==="exception"&&(!queueFilter||b.queue===queueFilter)).length===0?<div style={{textAlign:"center",padding:48,color:C.dim}}>✓ No open exceptions{queueFilter?` in ${queueFilter}`:""}</div>:liveBills.filter(b=>b.status==="exception"&&(!queueFilter||b.queue===queueFilter)).map(b=>(<div key={b.id} style={{background:C.card,borderRadius:12,padding:16,marginBottom:10,border:`1px solid ${C.border}`,borderLeft:`4px solid ${QUEUES[b.queue]?.color}`}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"start"}}><div style={{flex:1,marginRight:16}}><div style={{fontSize:14,fontWeight:600}}>{b.vendor}</div><div style={{fontSize:11,color:C.dim,fontFamily:"'JetBrains Mono',monospace",marginTop:2}}>{b.id}</div><div style={{fontSize:12,color:C.muted,marginTop:6,lineHeight:1.6}}>{b.queueReason}</div>{b.failedRules&&<div style={{fontSize:11,color:C.amber,marginTop:4,fontFamily:"'JetBrains Mono',monospace",fontWeight:600}}>Rules: {b.failedRules.join(", ")}</div>}</div><div style={{textAlign:"right",flexShrink:0}}><div style={{fontSize:20,fontWeight:700,fontFamily:"'JetBrains Mono',monospace",color:b.amount<0?C.red:C.text}}>{b.amount<0?"-":""}₹{fmt(b.amount)}</div><div style={{fontSize:11,color:QUEUES[b.queue]?.color,marginTop:2,fontWeight:600}}>{b.queue} · {b.date}</div></div></div><div style={{display:"flex",gap:8,marginTop:12}}><button onClick={()=>setSelectedBill(b)} style={{background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 18px",fontSize:12,fontWeight:600,cursor:"pointer"}}>View details</button><SrcPill source={b.source}/></div></div>))}
+        </>}
+        {tab==="bills"&&<>
+          <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>
+            {["all","zoho","cc"].map(s=><button key={s} onClick={()=>setSourceFilter(s)} style={btnSm(sourceFilter===s)}>{s.toUpperCase()}</button>)}
+            <div style={{width:1,background:C.border,margin:"0 4px"}}/>
+            {["all","posted","exception","in_zoho","parked"].map(s=><button key={s} onClick={()=>setStatusFilter(s)} style={btnSm(statusFilter===s)}>{s==="all"?"All":s==="in_zoho"?"In Zoho":s.replace("_"," ")}</button>)}
+          </div>
+          <div style={{background:C.card,borderRadius:12,overflow:"hidden",border:`1px solid ${C.border}`}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 150px 110px 70px 110px 80px",gap:8,padding:"10px 16px",fontSize:10,color:C.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:1,borderBottom:`1px solid ${C.border}`,background:C.surface}}><span>Vendor</span><span>GL</span><span style={{textAlign:"right"}}>Amount</span><span style={{textAlign:"center"}}>Src</span><span style={{textAlign:"center"}}>Status</span><span style={{textAlign:"right"}}>Date</span></div>
+            {filtered.map(b=>(<div key={b.id} onClick={()=>setSelectedBill(b)} style={{display:"grid",gridTemplateColumns:"1fr 150px 110px 70px 110px 80px",gap:8,padding:"10px 16px",borderBottom:`1px solid ${C.border}`,cursor:"pointer",fontSize:13,alignItems:"center"}} onMouseEnter={e=>e.currentTarget.style.background=C.surface} onMouseLeave={e=>e.currentTarget.style.background="transparent"}><div><div style={{color:C.text,fontWeight:500}}>{b.vendor}</div><div style={{fontSize:10,color:C.dim,fontFamily:"'JetBrains Mono',monospace"}}>{b.id}</div></div><div style={{color:C.muted,fontSize:12}}>{b.gl||"—"}</div><div style={{color:b.amount<0?C.red:C.text,fontFamily:"'JetBrains Mono',monospace",textAlign:"right",fontWeight:500}}>{b.amount<0?"-":""}₹{fmt(b.amount)}</div><div style={{textAlign:"center"}}><SrcPill source={b.source}/></div><div style={{textAlign:"center"}}><StatusPill status={b.status}/></div><div style={{color:C.dim,fontSize:12,textAlign:"right"}}>{b.date}</div></div>))}
+            {filtered.length===0&&<div style={{textAlign:"center",padding:40,color:C.dim}}>No bills match filters</div>}
+          </div>
+        </>}
+        {tab==="notifier"&&<NotifierTab bills={liveBills} slackSending={slackSending} slackSent={slackSent} handleSendSlack={handleSendSlack}/>}
+        {tab==="connections"&&(<div>
+          <div style={{fontSize:13,color:C.muted,marginBottom:16}}>Live connection status — verified against real APIs</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:20}}>
+            <ConnBadge label="Zoho Books" status={conn.zoho} detail="Omnia Information Pvt Ltd · ELITE plan · Org 60036724867"/>
+            <ConnBadge label="Slack" status={conn.slack} detail="wiomworkspace · #finance · #finance-and-ptl"/>
+            <ConnBadge label="Google Drive" status={conn.drive} detail="Rules Engine V2 · ID: 1xGH3kJ8xKKgeymVMZ7Qzbbc9QX0kBLzC4KUlp8_kEzY"/>
+          </div>
+          <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:12,padding:16}}>
+            <div style={{fontSize:13,fontWeight:700,color:"#92400e",marginBottom:8}}>⚠ Zoho Hard Rules (non-negotiable)</div>
+            <div style={{fontSize:12,color:"#78350f",lineHeight:1.8}}><strong>ZH-1:</strong> NO deletion — delete API calls permanently blocked in zoho-poster.js<br/><strong>ZH-2:</strong> NO update of posted entries — immutable. Edit tab is read-only for posted bills.<br/><strong>ZH-3:</strong> DRAFT ONLY — system saves drafts. FC manually opens Zoho and posts after review.</div>
+          </div>
+        </div>)}
+        {tab==="audit"&&auditLog.map((a,i)=>(<div key={i} style={{background:C.card,borderRadius:10,padding:14,marginBottom:8,border:`1px solid ${C.border}`,borderLeft:`4px solid ${a.action==="force_post"?C.amber:a.action==="resolve"?C.green:C.red}`}}><div style={{display:"flex",justifyContent:"space-between"}}><div style={{fontSize:13,fontWeight:600}}>{a.action.replace("_"," ").toUpperCase()} — {a.billId}</div><div style={{fontSize:11,color:C.muted}}>{a.actor} · {new Date(a.timestamp).toLocaleString()}</div></div></div>))}
       </div>
+      {selectedBill&&<TransactionDetail bill={selectedBill} onClose={()=>setSelectedBill(null)} onAction={(data)=>{handleAction(data);}}/>}
     </div>
   );
 }

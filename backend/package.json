@@ -1,0 +1,30 @@
+{
+  "name": "wiom-finance-autopilot",
+  "version": "9.0.0",
+  "description": "AP automation: source-specific orchestrators + shared validation services",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "node --test test/**/*.test.js",
+    "migrate": "node src/infra/db/migrate.js",
+    "health": "curl -s http://localhost:${PORT:-3000}/health | node -e \"process.stdin.on('data',d=>console.log(JSON.parse(d)))\""
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "pg": "^8.13.0",
+    "ioredis": "^5.4.0",
+    "googleapis": "^144.0.0",
+    "express": "^4.21.0",
+    "axios": "^1.7.0",
+    "fuse.js": "^7.0.0",
+    "uuid": "^10.0.0",
+    "cron": "^3.1.0",
+    "pdf-parse": "^1.1.1",
+    "winston": "^3.14.0",
+    "p-limit": "^3.1.0",
+    "bottleneck": "^2.19.5"
+  }
+}
